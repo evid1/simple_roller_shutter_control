@@ -1,5 +1,5 @@
 blueprint:
-  name: Rollo Automatik nach Licht und Fenster (v3)
+  name: Rollo Automatik nach Licht und Fenster (v4)
   description: Schließt und öffnet ein Rollo basierend auf einem Lichtsensor und dem Fensterstatus.
   domain: automation
   input:
@@ -43,11 +43,6 @@ blueprint:
     time_after:
       name: Früheste Öffnungszeit
       default: "08:00:00"
-      selector:
-        time: {}
-    time_before:
-      name: Späteste Öffnungszeit
-      default: "18:00:00"
       selector:
         time: {}
 
@@ -109,7 +104,8 @@ action:
             value_template: "{{ state_attr(cover_entity_var, 'current_position') | int == close_position_var | int }}"
           - condition: time
             after: !input time_after
-            before: !input time_before
+          - condition: template
+            value_template: "{{ now() < (states('sensor.sun_next_setting') | as_datetime | as_local) }}"
           - condition: trigger
             id:
               - licht_rollo_oeffnen
