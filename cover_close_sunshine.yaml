@@ -47,6 +47,7 @@ blueprint:
         time: {}
     time_before:
       name: Späteste Öffnungszeit
+      description: Es wird die festgelegte Uhrzeit oder die des Sonnenuntergangs verwendet, je nachdem was früher ist.
       default: "20:00:00"
       selector:
         time: {}
