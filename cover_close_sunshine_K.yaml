@@ -1,0 +1,144 @@
+blueprint:
+  name: Rollo Automatik nach Licht und Fenster (v5 korrigiert)
+  description: Schließt und öffnet ein Rollo basierend auf einem Lichtsensor und dem Fensterstatus.
+  domain: automation
+  input:
+    light_sensor:
+      name: Lichtsensor (Lux)
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+    lux_threshold:
+      name: Schwellenwert (Input Number)
+      description: Der Helfer, der den Lux-Grenzwert definiert.
+      selector:
+        entity:
+          domain: input_number
+    window_sensor:
+      name: Fenstersensor
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: [window, door]
+    cover_entity:
+      name: Rollo
+      selector:
+        entity:
+          domain: cover
+    outside_temperature_entity:
+      name: Außentemperatur
+      selector:
+        entity:
+          domain: sensor
+          device_class: [temperature]
+    outside_temperature_threshold:
+      name: Außentemperatur-Grenzwert
+      default: 23
+      selector:
+        number:
+          min: 14
+          max: 30
+          mode: slider
+    close_position:
+      name: Schließposition (%)
+      default: 25
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: slider
+    auto_open_enabled:
+      name: Automatisches Öffnen aktivieren
+      default: true
+      selector:
+        boolean: {}
+    time_after:
+      name: Früheste Öffnungszeit
+      default: "08:00:00"
+      selector:
+        time: {}
+    time_before:
+      name: Späteste Öffnungszeit
+      default: "20:00:00"
+      selector:
+        time: {}
+
+variables:
+  auto_open_enabled_var: !input auto_open_enabled
+  cover_entity_var: !input cover_entity
+  close_position_var: !input close_position
+  outside_temperature_threshold_var: !input outside_temperature_threshold
+  outside_temperature_var: !input outside_temperature_entity
+
+mode: restart
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input light_sensor
+    above: !input lux_threshold
+    for:
+      minutes: 5
+    id: licht_rollo_schliessen
+  - platform: state
+    entity_id: !input window_sensor
+    to: "off"
+    id: fenster_rollo_schliessen
+  - platform: numeric_state
+    entity_id: !input light_sensor
+    below: !input lux_threshold
+    for:
+      minutes: 30
+    id: licht_rollo_oeffnen
+
+condition:
+  - condition: state
+    entity_id: !input window_sensor
+    state: "off"
+
+action:
+  - choose:
+      # Rollo schließen
+      - conditions:
+          - condition: trigger
+            id:
+              - licht_rollo_schliessen
+              - fenster_rollo_schliessen
+          - condition: numeric_state
+            entity_id: !input cover_entity
+            attribute: current_position
+            above: !input close_position
+          - condition: numeric_state
+            entity_id: !input light_sensor
+            above: !input lux_threshold
+        sequence:
+          - action: cover.set_cover_position
+            target:
+              entity_id: !input cover_entity
+            data:
+              position: !input close_position
+
+      # Rollo öffnen
+      - conditions:
+          - condition: template
+            value_template: "{{ auto_open_enabled_var }}"
+          - condition: template
+            value_template: "{{ state_attr(cover_entity_var, 'current_position') | int(0) <= close_position_var | int(0) }}"
+          - condition: template
+            value_template: "{{ states(outside_temperature_var) | float(0) <= outside_temperature_threshold_var | float(0) }}"
+          - condition: time
+            after: !input time_after
+            before: !input time_before
+          - condition: template
+            value_template: >-
+              {% set next_setting = state_attr('sun.sun', 'next_setting') %}
+              {{ next_setting is not none and now() < (next_setting | as_datetime | as_local) }}
+          - condition: trigger
+            id:
+              - licht_rollo_oeffnen
+        sequence:
+          - action: cover.set_cover_position
+            target:
+              entity_id: !input cover_entity
+            data:
+              position: 100
