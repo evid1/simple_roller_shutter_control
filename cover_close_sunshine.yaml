@@ -1,5 +1,5 @@
 blueprint:
-  name: Rollo Automatik nach Licht und Fenster (v5)
+  name: Rollo Automatik nach Licht und Fenster (v6)
   description: Schließt und öffnet ein Rollo basierend auf einem Lichtsensor und dem Fensterstatus.
   domain: automation
   input:
@@ -26,6 +26,20 @@ blueprint:
       selector:
         entity:
           domain: cover
+    outside_temperature_entity:
+      name: Außentemperatur
+      selector:
+        entity:
+          domain: sensor
+          device_class: [temperature]
+    outside_temperature_threshold:
+      name: Außentemperatur-Grenzwert
+      default: 20
+      selector:
+        number:
+          min: 14
+          max: 30
+          mode: slider
     close_position:
       name: Schließposition (%)
       default: 25
@@ -57,6 +71,8 @@ variables:
   auto_open_enabled_var: !input auto_open_enabled
   cover_entity_var: !input cover_entity
   close_position_var: !input close_position
+  outside_temperature_threshold_var: !input outside_temperature_threshold
+  outside_temperature_var: !input outside_temperature_entity
 
 mode: restart
 
@@ -85,6 +101,8 @@ condition:
 
 action:
   - choose:
+
+      # close cover
       - conditions:
           - condition: trigger
             id:
@@ -103,16 +121,22 @@ action:
               entity_id: !input cover_entity
             data:
               position: !input close_position
+
+      # open cover
       - conditions:
           - condition: template
             value_template: "{{ auto_open_enabled_var }}"
           - condition: template
             value_template: "{{ state_attr(cover_entity_var, 'current_position') | int == close_position_var | int }}"
+          - condition: template
+            value_template: "{{ states(outside_temperature_var) | float(2) <= outside_temperature_threshold_var | int }}"
           - condition: time
             after: !input time_after
             before: !input time_before
           - condition: template
-            value_template: "{{ now() < (states('sensor.sun_next_setting') | as_datetime | as_local) }}"
+            value_template: >-
+              {% set next_setting = state_attr('sun.sun', 'next_setting') %}
+              {{ next_setting is not none and now() < (next_setting | as_datetime | as_local) }}
           - condition: trigger
             id:
               - licht_rollo_oeffnen
