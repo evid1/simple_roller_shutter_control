@@ -1,5 +1,5 @@
 blueprint:
-  name: Rollo Automatik nach Licht und Fenster (v5 korrigiert)
+  name: Rollo Automatik nach Licht und Fenster (v6)
   description: Schließt und öffnet ein Rollo basierend auf einem Lichtsensor und dem Fensterstatus.
   domain: automation
   input:
@@ -40,6 +40,14 @@ blueprint:
           min: 14
           max: 30
           mode: slider
+    outside_temperature_min:
+      name: Außentemperatur-Mindestwert
+      default: 15
+      selector:
+        number:
+          min: 10
+          max: 25
+          mode: slider
     close_position:
       name: Schließposition (%)
       default: 25
@@ -69,6 +77,7 @@ variables:
   cover_entity_var: !input cover_entity
   close_position_var: !input close_position
   outside_temperature_threshold_var: !input outside_temperature_threshold
+  outside_temperature_min_var: !input outside_temperature_min
   outside_temperature_var: !input outside_temperature_entity
 
 mode: restart
@@ -126,6 +135,8 @@ action:
             value_template: "{{ state_attr(cover_entity_var, 'current_position') | int(0) <= close_position_var | int(0) }}"
           - condition: template
             value_template: "{{ states(outside_temperature_var) | float(0) <= outside_temperature_threshold_var | float(0) }}"
+          - condition: template
+            value_template: "{{ states(outside_temperature_var) | float(0) > outside_temperature_min_var | float(0) }}"
           - condition: time
             after: !input time_after
             before: !input time_before
