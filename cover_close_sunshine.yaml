@@ -1,5 +1,5 @@
 blueprint:
-  name: Rollo Automatik nach Licht und Fenster (v7)
+  name: Rollo Automatik nach Licht und Fenster (v8)
   description: Schließt und öffnet ein Rollo basierend auf einem Lichtsensor und dem Fensterstatus.
   domain: automation
   input:
@@ -124,6 +124,8 @@ action:
           - condition: numeric_state
             entity_id: !input light_sensor
             above: !input lux_threshold
+          - condition: template
+            value_template: "{{ states(outside_temperature_var) | float(0) > outside_temperature_min_var | int }}"
         sequence:
           - action: cover.set_cover_position
             target:
@@ -139,8 +141,6 @@ action:
             value_template: "{{ state_attr(cover_entity_var, 'current_position') | int == close_position_var | int }}"
           - condition: template
             value_template: "{{ states(outside_temperature_var) | float(2) <= outside_temperature_threshold_var | int }}"
-          - condition: template
-            value_template: "{{ states(outside_temperature_var) | float(0) > outside_temperature_min_var | int }}"
           - condition: time
             after: !input time_after
             before: !input time_before
