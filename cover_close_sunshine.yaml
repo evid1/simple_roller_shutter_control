@@ -1,5 +1,5 @@
 blueprint:
-  name: Rollo Automatik nach Licht und Fenster (v8)
+  name: Rollo Automatik nach Licht und Fenster (v9)
   description: Schließt und öffnet ein Rollo basierend auf einem Lichtsensor und dem Fensterstatus.
   domain: automation
   input:
@@ -38,7 +38,7 @@ blueprint:
       selector:
         number:
           min: 14
-          max: 30
+          max: 35
           mode: slider
     outside_temperature_min:
       name: Außentemperatur-Mindestwert
